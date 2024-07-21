@@ -10,7 +10,7 @@ def parse_twitter_datetime(dt_string):
     return datetime.strptime(dt_string, '%a %b %d %H:%M:%S +0000 %Y')
 
 def process_tweet(tweet_data, session):
-    # Process user
+    
     user_data = tweet_data['user']
     user = session.query(User).filter_by(id_str=user_data['id_str']).first()
     if not user:
@@ -28,7 +28,7 @@ def process_tweet(tweet_data, session):
         session.add(user)
         session.flush()
 
-    # Process tweet
+
     tweet = Tweet(
         id_str=tweet_data['id_str'],
         created_at=parse_twitter_datetime(tweet_data['created_at']),
@@ -45,7 +45,7 @@ def process_tweet(tweet_data, session):
     session.add(tweet)
     session.flush()
 
-    # Process hashtags
+    
     for hashtag_data in tweet_data['entities']['hashtags']:
         hashtag_text = hashtag_data['text'].lower()
         if hashtag_text not in POPULAR_HASHTAGS:
@@ -55,7 +55,6 @@ def process_tweet(tweet_data, session):
                 session.add(hashtag)
                 session.flush()
             
-            # Check if the tweet-hashtag pair already exists
             tweet_hashtag = TweetHashtag(tweet_id=tweet.id, hashtag_id=hashtag.id)
             session.add(tweet_hashtag)
             try:
