@@ -96,12 +96,6 @@ analyzing_twitter_data_sls/
 3. API Endpoints
 
    - `GET /q2?user_id={user_id}&type={type}&phrase={phrase}&hashtag={hashtag}` 
-   - Query tweets based on user ID, type (user/hashtag/both), phrase, and hashtag. For example:
-   
-    ```
-      curl "http://127.0.0.1:8000/q2?user_id=1000&type=both&phrase=hello%20world&hashtag=tech"
-
-      ```
 
 ## Project Components
 
