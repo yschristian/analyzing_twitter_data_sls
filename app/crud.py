@@ -4,7 +4,7 @@ from . import models, schemas
 from .utils import POPULAR_HASHTAGS
 
 def get_user_recommendations(db: Session, user_id: int, contact_type: str, phrase: str, hashtag: str):
-    # Calculate interaction score
+  
     interaction_subquery = db.query(
         models.Tweet.user_id.label('contacted_user_id'),
         func.count(models.Tweet.id).label('interaction_count')
@@ -16,15 +16,15 @@ def get_user_recommendations(db: Session, user_id: int, contact_type: str, phras
         ))
     ).group_by(models.Tweet.user_id).subquery()
 
-    # Calculate hashtag score
+
     hashtag_subquery = db.query(
         models.Tweet.user_id.label('user_id'),
         func.count(models.Hashtag.id).label('hashtag_count')
-    ).join(models.TweetHashtag).join(models.Hashtag).filter(
+    ).join(models.TweetHashtag, models.Tweet.id == models.TweetHashtag.tweet_id).join(models.Hashtag, models.TweetHashtag.hashtag_id == models.Hashtag.id).filter(
         models.Hashtag.text.notin_(POPULAR_HASHTAGS)
     ).group_by(models.Tweet.user_id).subquery()
 
-    # Calculate keyword score
+   
     keyword_subquery = db.query(
         models.Tweet.user_id.label('user_id'),
         func.count(models.Tweet.id).label('keyword_count')
@@ -32,7 +32,7 @@ def get_user_recommendations(db: Session, user_id: int, contact_type: str, phras
         (models.Tweet.text.ilike(f'%{phrase}%')) |
         (models.Tweet.id.in_(
             db.query(models.TweetHashtag.tweet_id)
-            .join(models.Hashtag)
+            .join(models.Hashtag, models.TweetHashtag.hashtag_id == models.Hashtag.id)
             .filter(func.lower(models.Hashtag.text) == hashtag.lower())
         ))
     )
@@ -45,18 +45,18 @@ def get_user_recommendations(db: Session, user_id: int, contact_type: str, phras
         ))
     keyword_subquery = keyword_subquery.group_by(models.Tweet.user_id).subquery()
 
-    # Combine scores and get user recommendations
+
     recommendations = db.query(
         models.User.id,
         models.User.screen_name,
         models.User.description,
         models.Tweet.text.label('contact_tweet_text'),
         (func.log(1 + 2 * func.coalesce(interaction_subquery.c.interaction_count, 0)) *
-         func.greatest(1, 1 + func.log(1 + func.coalesce(hashtag_subquery.c.hashtag_count, 0) - 10)) *
+         func.greatest(1, 1 + func.log(func.greatest(1, 1 + func.coalesce(hashtag_subquery.c.hashtag_count, 0) - 10))) *
          (1 + func.log(func.coalesce(keyword_subquery.c.keyword_count, 0) + 1))).label('score')
-    ).join(interaction_subquery, models.User.id == interaction_subquery.c.contacted_user_id, isouter=True
-    ).join(hashtag_subquery, models.User.id == hashtag_subquery.c.user_id, isouter=True
-    ).join(keyword_subquery, models.User.id == keyword_subquery.c.user_id, isouter=True
+    ).outerjoin(interaction_subquery, models.User.id == interaction_subquery.c.contacted_user_id
+    ).outerjoin(hashtag_subquery, models.User.id == hashtag_subquery.c.user_id
+    ).outerjoin(keyword_subquery, models.User.id == keyword_subquery.c.user_id
     ).join(models.Tweet, models.User.id == models.Tweet.user_id
     ).filter(models.User.id != user_id
     ).order_by(desc('score'), desc(models.User.id)

@@ -2,8 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import crud, schemas, database
 from urllib.parse import unquote
+from dotenv import load_dotenv
+import os
 
 router = APIRouter()
+
+load_dotenv()
+
+TEAM_ID = os.getenv("TEAM_ID")
+TEAM_AWS_ACCOUNT_ID = os.getenv("TEAM_AWS_ACCOUNT_ID")
 
 @router.get("/q2", response_model=schemas.Q2Response)
 def get_user_recommendations(
@@ -18,8 +25,11 @@ def get_user_recommendations(
     
     decoded_phrase = unquote(phrase)
     recommendations = crud.get_user_recommendations(db, user_id, type, decoded_phrase, hashtag)
+
+ # PUT team_id and team_aws_account_id    
+ 
     return schemas.Q2Response(
-        team_id="YourTeamID",
-        team_aws_account_id="YourAWSAccountID",
+        team_id="TEAM_ID", 
+        team_aws_account_id="TEAM_AWS_ACCOUNT_ID",
         recommendations=recommendations
     )
